@@ -8,28 +8,63 @@ from pycocotools.coco import COCO
 class Vocabulary(object):
     """Simple vocabulary wrapper."""
     def __init__(self):
+        self.word2id = {}
+        self.id2word = {}
+        self.idx = 0
         
 
     def add_word(self, word):
+        if word not in self.word2id:
+            self.word2id[word] = self.idx
+            self.id2word[self.idx] = word
+            self.idx += 1
+        return
         
 
     def __call__(self, word):
+        if word in self.word2id:
+            return self.word2id[word]
+        else:
+            return self.word2id['<unk>']
         
 
     def __len__(self):
+        return self.idx
         
 
 def build_vocab(json, threshold):
     """Build a simple vocabulary wrapper."""
+    coco = COCO(json)
+    # print(coco.dataset.keys())  # dict_keys(['info', 'images', 'licenses', 'annotations'])
+    # print(len(coco.anns.keys()))  # [..., 829717] 414113
+    # print(coco.anns[828779])  # {'image_id': 58153, 'id': 828779, 'caption': 'This is a nice breakfast of eggs, a mini muffin, coffee, and orange juice.'}
+    counter = Counter()
+
+    ids = coco.anns.keys()
+    # nltk.download('punkt_tab')
+
+    for i in ids:
+        caption = coco.anns[i]['caption']
+        words = nltk.tokenize.word_tokenize(caption)
+        counter.update(words)
     
 
     # If the word frequency is less than 'threshold', then the word is discarded.
-    
+    vocab_words = []
+    for word, nums in counter.items():
+        if nums >= threshold:
+            vocab_words.append(word)
 
     # Create a vocab wrapper and add some special tokens.
-    
+    vocab = Vocabulary()
+    vocab.add_word('<pad>')
+    vocab.add_word('<start>')
+    vocab.add_word('<end>')
+    vocab.add_word('<unk>')
 
     # Add the words to the vocabulary.
+    for word in vocab_words:
+        vocab.add_word(word)
     
     return vocab
 
