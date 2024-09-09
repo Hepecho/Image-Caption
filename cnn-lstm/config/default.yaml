@@ -1,0 +1,16 @@
+model_name: 'CNN-LSTM'
+model_dir: 'checkpoint/'  # path for saving trained models
+log_dir: 'log/'
+crop_size: 224  # size for randomly cropping images
+vocab_path: 'data/vocab.pkl'  # path for vocabulary wrapper
+image_dir: 'data/resized2014'  # directory for resized images
+caption_path: 'data/annotations/captions_train2014.json'  # path for train annotation json file
+log_step: 100  # step size for prining log info
+save_step: 1000  # step size for saving trained models
+embed_size: 256  # dimension of word embedding vectors
+hidden_size: 512  # dimension of lstm hidden states
+num_layers: 1  # number of layers in lstm
+num_epochs: 5
+batch_size: 128
+num_workers: 2
+learning_rate: 0.001
