@@ -25,7 +25,8 @@ class EncoderCNN(nn.Module):
         
         features = self.fc(features)  # (B, embed_size)
 
-        features = self.bn(features)
+        if batch_size > 1:
+            features = self.bn(features)
 
         return features
 
@@ -57,10 +58,32 @@ class DecoderRNN(nn.Module):
         outputs = self.linear(outputs.data)  # (real_L * B, V)
         return outputs
     
-    def sample(self, features, states=None):
+    def sample(self, features, vocab, states=None):
         """Generate captions for given image features using greedy search."""
-        pass
-        return sampled_ids
+        output = features # (1, embed_size)
+        
+        max_seq_length = 20
+        sampled_ids = []
+        end_ids = [vocab('.'), vocab('<end>')]
+        
+        for i in range(max_seq_length):
+            with torch.no_grad():
+                if states is None:
+                    output, states = self.lstm(output)
+                else:
+                    h_i, c_i = states
+                    output, states = self.lstm(output, (h_i, c_i)) # output (1, hidden_size)
+                
+                pred = self.linear(output)
+                _, pred_id = pred.max(1)  # word_id
+                output = self.embedding(pred_id)  # output (1, embed_size)
+            
+            sampled_ids.append(int(pred_id[0].cpu().numpy()))
+
+            if pred_id in end_ids:
+                break
+
+        return sampled_ids  # (L)
 
 if __name__ == '__main__':
     import pickle
