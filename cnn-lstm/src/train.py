@@ -47,6 +47,17 @@ def main(config):
     # Build the models
     encoder = EncoderCNN(config.embed_size).to(device)
     decoder = DecoderRNN(config.embed_size, config.hidden_size, len(vocab), config.num_layers).to(device)
+    if config.load_model != '':
+        checkpoint = torch.load(os.path.join(config.model_dir, config.load_model))
+        encoder.load_state_dict(checkpoint['encoder'])
+        encoder.to(device)
+        decoder.load_state_dict(checkpoint['decoder'])
+        decoder.to(device)
+        name = config.load_model.split('_')  # model_{epoch}_{i}.pth
+        start_epoch = int(name[-2]) + 1
+    else:
+        start_epoch = 0
+
     
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -60,7 +71,7 @@ def main(config):
     encoder.train()
     decoder.train()
     
-    for epoch in range(config.num_epochs):
+    for epoch in range(start_epoch, config.num_epochs):
         total_loss = 0
         start_time = time.time()
         for i, batch in enumerate(data_loader):
@@ -68,13 +79,18 @@ def main(config):
             images, captions, lengths = batch
             images = images.to(device)
             captions = captions.to(device)
+            
             # lengths = torch.Tensor(lengths, dtype=torch.int64)
             target = pack_padded_sequence(captions, lengths, batch_first=True)
             target = target.data.to(device)  # (real_L * B)
+            # print(target[:20])
+            # print(lengths[0])
+            # print(vocab.id2word[4])
             
             # Forward, backward and optimize
             fearures = encoder(images)
             outputs = decoder(fearures, captions, lengths)  # (real_L * B, V)
+            _, pred = outputs.max(1)
             
             loss = criterion(outputs, target.long())
             total_loss += loss.item() * len(lengths)
@@ -112,7 +128,7 @@ def main(config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--config', type=str, default='config/default.yaml' , help='path for saving trained models')
+    parser.add_argument('--config', type=str, default='config/default.yaml' , help='path for config file')
     args = parser.parse_args()
     config = OmegaConf.load(args.config)
     logx.initialize(logdir=config.log_dir, coolname=False, tensorboard=False)
