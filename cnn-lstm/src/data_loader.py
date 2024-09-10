@@ -84,14 +84,14 @@ def collate_fn(data):
 
     # Merge captions (from tuple of 1D tensor to 2D tensor).
     max_length = captions[0].shape[0]
-    captions = torch.zeros([len(captions), max_length], dtype=torch.int)
+    captions_tensor = torch.zeros([len(captions), max_length], dtype=torch.int)
     lengths = []
 
     for i, caption in enumerate(captions):
-        captions[i, :caption.shape[0]] = caption
+        captions_tensor[i, :caption.shape[0]] = caption
         lengths.append(caption.shape[0])
 
-    return images, captions, lengths
+    return images, captions_tensor, lengths
     
 
 def get_loader(root, json, vocab, transform, batch_size, shuffle, num_workers):
