@@ -54,7 +54,7 @@ def main(config):
         decoder.load_state_dict(checkpoint['decoder'])
         decoder.to(device)
         name = config.load_model.split('_')  # model_{epoch}_{i}.pth
-        start_epoch = int(name[-2]) + 1
+        start_epoch = int(name[-1][:-4]) + 1
     else:
         start_epoch = 0
 
@@ -97,13 +97,13 @@ def main(config):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if i % config.save_step == 0:
-                state = {
-                    'encoder':encoder.state_dict(),
-                    'decoder':decoder.state_dict()
-                }
-                ckpt_path = os.path.join(config.model_dir, f'model_{epoch}_{i}.pth')
-                torch.save(state, ckpt_path)
+            # if i % config.save_step == 0:
+            #     state = {
+            #         'encoder':encoder.state_dict(),
+            #         'decoder':decoder.state_dict()
+            #     }
+            #     ckpt_path = os.path.join(config.model_dir, f'model_{epoch}_{i}.pth')
+            #     torch.save(state, ckpt_path)
             if i % config.log_step == 0:
                 logx.msg(f'Epoch: {epoch} | Batch {i} Loss: {loss.item():.4f}')
 
@@ -111,12 +111,13 @@ def main(config):
         total_loss /= len(data_loader.dataset)
         end_time = time.time()
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-        state = {
-            'encoder':encoder.state_dict(),
-            'decoder':decoder.state_dict()
-        }
-        ckpt_path = os.path.join(config.model_dir, f'model_{epoch}_latest.pth')
-        torch.save(state, ckpt_path)
+        if epoch % config.save_step == 0:
+            state = {
+                'encoder':encoder.state_dict(),
+                'decoder':decoder.state_dict()
+            }
+            ckpt_path = os.path.join(config.model_dir, f'model_{epoch}.pth')
+            torch.save(state, ckpt_path)
         
         logx.msg(f'Epoch: {epoch} | Epoch Time: {epoch_mins}m {epoch_secs}s')
         logx.msg(f'Train Loss: {total_loss:.4f}')
