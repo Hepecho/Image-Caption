@@ -33,7 +33,7 @@ class CocoDataset(data.Dataset):
         img_id = self.coco.anns[self.ids[index]]['image_id']
         img_descriptor = self.coco.loadImgs(img_id)
         image = Image.open(os.path.join(self.root, img_descriptor[0]['file_name']))
-        if image.mode == 'L':  # 灰度图转RGB
+        if image.mode != 'RGB':  # 转RGB
             image = image.convert('RGB')
         
         if self.transform is not None:
@@ -101,7 +101,7 @@ def get_loader(root, json, vocab, transform, batch_size, shuffle, num_workers):
                        json=json,
                        vocab=vocab,
                        transform=transform)
-    image, target = coco[0]
+    # image, target = coco[0]
     # Data loader for COCO dataset
     # This will return (images, captions, lengths) for each iteration.
     # images: a tensor of shape (batch_size, 3, 224, 224).
