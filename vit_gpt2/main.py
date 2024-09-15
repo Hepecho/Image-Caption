@@ -3,13 +3,14 @@ from transformers import VisionEncoderDecoderModel, ViTImageProcessor, AutoToken
 import torch
 from PIL import Image
 import os
-from os.path import join as ospj
+import argparse
+import numpy as np
 
 
 max_length = 16
 num_beams = 4
 gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
-image_dir = '../val_data/doc'
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -34,11 +35,19 @@ def vit_api(image):
   return preds[0]
   
 
-def predict_step(image_dir):
-  image_names = os.listdir(image_dir)
+def main(image_source):
+  image_paths = []
+  if os.path.isdir(image_source):
+      names = os.listdir(image_source)
+      image_paths = [os.path.join(image_source, name) for name in names]
+  elif os.path.isfile(image_source):
+      image_paths = [image_source]
+  else:
+      assert False, 'wrong args.image_source!'
+
   images = []
-  for name in image_names:
-    i_image = Image.open(ospj(image_dir, name))
+  for image_path in image_paths:
+    i_image = Image.open(image_path)
     if i_image.mode != "RGB":
       i_image = i_image.convert(mode="RGB")
 
@@ -51,11 +60,23 @@ def predict_step(image_dir):
 
   preds = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
   preds = [pred.strip() for pred in preds]
-  return image_names, preds
+
+  for image_path, caption in zip(image_paths, preds):
+    print(f'{image_path} using vit-gpt2: {caption}]')
 
 
 
 if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--seed', type=int, default=1)
+  parser.add_argument('--image_source', type=str, default='../val_data/doc/', help='input image dir or path for generating caption')
+  args = parser.parse_args()
+
+  np.random.seed(args.seed)
+  torch.manual_seed(args.seed)
+  torch.cuda.manual_seed_all(args.seed)
+  torch.backends.cudnn.deterministic = True
+
   # 如果无法连接huggingfac，命令行添加 export HF_ENDPOINT="https://hf-mirror.com" 
   model = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
   feature_extractor = ViTImageProcessor.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
@@ -63,12 +84,9 @@ if __name__ == '__main__':
 
   model.to(device)
 
-  image_names, tmp_preds = predict_step(image_dir)
+  main(args.image_source)
 
-  for name, caption in zip(image_names, tmp_preds):
-    print(f'image [{name}], caption [{caption}]')
-
-
+  
 """
 image [R-C.jpg], caption [two people sitting on a park bench reading a book]
 image [fox.jpg], caption [a brown and white dog laying in the grass]
